@@ -1,8 +1,7 @@
 package dev.local.typinglog
 
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.Activity
-import android.app.AlertDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +15,8 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import java.io.File
 import java.util.concurrent.Executors
@@ -24,7 +25,7 @@ import java.util.concurrent.Executors
  * 日志页：从首页右下角的小圆点输密码进来，外部应用拿不到 Auth 口令。
  * 记录状态、开关、查看、导出、飞书配置都在这里。
  */
-class LogsActivity : Activity() {
+class LogsActivity : AppCompatActivity() {
 
     private val io = Executors.newSingleThreadExecutor()
 
@@ -153,7 +154,7 @@ class LogsActivity : Activity() {
             .create()
 
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
                 if (Passwords.matches(this, input.text.toString())) {
                     unlocked = true
                     pausedAt = 0

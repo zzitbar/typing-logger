@@ -1,21 +1,23 @@
 package dev.local.typinglog
 
-import android.app.Activity
-import android.app.AlertDialog
-import android.content.ClipData
-import android.content.ClipboardManager
+import android.content.DialogInterface
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
-import android.widget.BaseAdapter
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.appbar.MaterialToolbar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -23,15 +25,15 @@ import java.util.concurrent.Executors
 
 /**
  * 首页：微博热搜榜。
- * 右下角有个几乎看不见的小圆点，点它输入密码才进日志页。
+ * 点条目跳微博（优先客户端，装不了就开网页）；右下角小圆点是日志入口。
  */
-class HotSearchActivity : Activity() {
+class HotSearchActivity : AppCompatActivity() {
 
     private val io = Executors.newSingleThreadExecutor()
 
-    private lateinit var listView: ListView
-    private lateinit var tvUpdated: TextView
-    private lateinit var btnRefresh: Button
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var swipe: SwipeRefreshLayout
+    private lateinit var recycler: RecyclerView
 
     private val items = ArrayList<HotItem>()
     private val adapter = HotAdapter()
@@ -43,14 +45,26 @@ class HotSearchActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_hot)
 
-        listView = findViewById(R.id.lvHot)
-        tvUpdated = findViewById(R.id.tvUpdated)
-        btnRefresh = findViewById(R.id.btnRefresh)
+        toolbar = findViewById(R.id.toolbar)
+        swipe = findViewById(R.id.swipe)
+        recycler = findViewById(R.id.rvHot)
 
-        listView.adapter = adapter
-        listView.setOnItemClickListener { _, _, position, _ -> copyTitle(position) }
+        recycler.layoutManager = LinearLayoutManager(this)
+        recycler.adapter = adapter
 
-        btnRefresh.setOnClickListener { refresh() }
+        toolbar.inflateMenu(R.menu.menu_hot)
+        toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.action_refresh) {
+                refresh()
+                true
+            } else {
+                false
+            }
+        }
+
+        swipe.setColorSchemeColors(0xFFFF8200.toInt())
+        swipe.setOnRefreshListener { refresh() }
+
         findViewById<View>(R.id.btnHidden).setOnClickListener { askPassword() }
 
         restoreCache()
@@ -59,7 +73,6 @@ class HotSearchActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        // 放久了回来顺手刷一次
         if (!loading && lastLoadedAt > 0 &&
             System.currentTimeMillis() - lastLoadedAt > 5 * 60_000
         ) {
@@ -81,14 +94,14 @@ class HotSearchActivity : Activity() {
         items.clear()
         items.addAll(list)
         adapter.notifyDataSetChanged()
-        tvUpdated.text = "缓存 " + timeText(at)
+        toolbar.subtitle = "缓存 " + timeText(at)
     }
 
     private fun refresh() {
         if (loading) return
         loading = true
-        btnRefresh.isEnabled = false
-        tvUpdated.text = "加载中…"
+        swipe.isRefreshing = true
+        toolbar.subtitle = "加载中…"
 
         io.execute {
             val list = try {
@@ -99,7 +112,7 @@ class HotSearchActivity : Activity() {
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 loading = false
-                btnRefresh.isEnabled = true
+                swipe.isRefreshing = false
 
                 if (list.isNotEmpty()) {
                     items.clear()
@@ -107,21 +120,26 @@ class HotSearchActivity : Activity() {
                     adapter.notifyDataSetChanged()
                     lastLoadedAt = System.currentTimeMillis()
                     HotSearchRepository.saveCache(this, list)
-                    tvUpdated.text = "更新于 " + timeText(lastLoadedAt)
-                    listView.setSelection(0)
+                    toolbar.subtitle = "更新于 " + timeText(lastLoadedAt)
+                    recycler.scrollToPosition(0)
                 } else {
-                    tvUpdated.text =
-                        if (items.isEmpty()) "加载失败，点刷新重试" else "刷新失败，显示缓存"
+                    toolbar.subtitle =
+                        if (items.isEmpty()) "加载失败，下拉重试" else "刷新失败，显示缓存"
                 }
             }
         }
     }
 
-    private fun copyTitle(position: Int) {
-        val item = items.getOrNull(position) ?: return
-        val cm = getSystemService(ClipboardManager::class.java) ?: return
-        cm.setPrimaryClip(ClipData.newPlainText("hot", item.title))
-        toast("已复制：" + item.title)
+    // ------------------------------------------------------------ 跳转
+
+    private fun openWeibo(title: String) {
+        val q = Uri.encode(title)
+        val url = "https://m.weibo.cn/search?containerid=100103type%3D1%26q%3D$q"
+        startActivity(
+            Intent(this, WebViewActivity::class.java)
+                .putExtra(WebViewActivity.EXTRA_URL, url)
+                .putExtra(WebViewActivity.EXTRA_TITLE, title)
+        )
     }
 
     // ------------------------------------------------------------ 隐藏入口
@@ -146,7 +164,7 @@ class HotSearchActivity : Activity() {
             .create()
 
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
                 if (Passwords.matches(this@HotSearchActivity, input.text.toString())) {
                     val nonce = Auth.grant()
                     startActivity(
@@ -165,33 +183,36 @@ class HotSearchActivity : Activity() {
 
     // ------------------------------------------------------------ 列表
 
-    private inner class HotAdapter : BaseAdapter() {
-        override fun getCount(): Int = items.size
+    private inner class HotAdapter : RecyclerView.Adapter<HotAdapter.Holder>() {
 
-        override fun getItem(position: Int): Any = items[position]
-
-        override fun getItemId(position: Int): Long = position.toLong()
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val view = convertView
-                ?: layoutInflater.inflate(R.layout.item_hot, parent, false)
-            val item = items[position]
-
-            val rank = view.findViewById<TextView>(R.id.tvRank)
-            rank.text = item.rank.toString()
-            rank.setTextColor(
-                when (item.rank) {
-                    1 -> 0xFFE6162D.toInt()
-                    2 -> 0xFFFF6A00.toInt()
-                    3 -> 0xFFFFA000.toInt()
-                    else -> 0xFF999999.toInt()
-                }
-            )
-
-            view.findViewById<TextView>(R.id.tvTitle).text = item.title
-            view.findViewById<TextView>(R.id.tvHot).text = item.hot
-            return view
+        inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val rank: TextView = view.findViewById(R.id.tvRank)
+            val title: TextView = view.findViewById(R.id.tvTitle)
+            val hot: TextView = view.findViewById(R.id.tvHot)
         }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+            val view = layoutInflater.inflate(R.layout.item_hot, parent, false)
+            return Holder(view)
+        }
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val item = items[position]
+            holder.rank.text = item.rank.toString()
+            holder.rank.backgroundTintList = ColorStateList.valueOf(rankColor(item.rank))
+            holder.title.text = item.title
+            holder.hot.text = item.hot
+            holder.itemView.setOnClickListener { openWeibo(item.title) }
+        }
+
+        override fun getItemCount(): Int = items.size
+    }
+
+    private fun rankColor(rank: Int): Int = when (rank) {
+        1 -> 0xFFE6162D.toInt()
+        2 -> 0xFFFF6A00.toInt()
+        3 -> 0xFFFFA000.toInt()
+        else -> 0xFFBDBDBD.toInt()
     }
 
     private fun timeText(ts: Long): String =

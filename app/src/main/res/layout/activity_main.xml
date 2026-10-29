@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -8,130 +9,178 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="16dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:text="@string/logs_title"
-            android:textSize="22sp"
+            android:textColor="#1A1A1A"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:lineSpacingExtra="4dp"
-            android:textSize="14sp" />
+            android:textColor="#666666"
+            android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/btnAccess"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="去开启无障碍服务" />
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#F0F0F0"
+            app:strokeWidth="1dp">
 
-        <Switch
-            android:id="@+id/swEnabled"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="记录开关" />
-
-        <Button
-            android:id="@+id/btnToday"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="查看今天的记录" />
-
-        <Button
-            android:id="@+id/btnShare"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="导出全部记录（zip）" />
-
-        <Button
-            android:id="@+id/btnClear"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="清空全部记录" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="飞书推送"
-            android:textSize="17sp"
-            android:textStyle="bold" />
-
-        <Switch
-            android:id="@+id/swFeishu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="检测到新记录就推到飞书" />
-
-        <EditText
-            android:id="@+id/etWebhook"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="机器人 Webhook（https://open.feishu.cn/...）"
-            android:inputType="textUri"
-            android:maxLines="3"
-            android:textSize="13sp" />
-
-        <EditText
-            android:id="@+id/etSecret"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="签名校验 Secret（没开加签就留空）"
-            android:inputType="textVisiblePassword"
-            android:maxLines="1"
-            android:textSize="13sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnSaveFeishu"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="保存" />
+                android:orientation="vertical"
+                android:padding="14dp">
 
-            <Button
-                android:id="@+id/btnTestFeishu"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="测试推送" />
-        </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAccess"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="去开启无障碍服务" />
 
-        <TextView
-            android:id="@+id/tvPush"
+                <Switch
+                    android:id="@+id/swEnabled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="记录开关" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnToday"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="查看今天的记录" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnShare"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="导出全部记录（zip）" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClear"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="清空全部记录" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="12sp" />
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#F0F0F0"
+            app:strokeWidth="1dp">
 
-        <Button
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="飞书推送"
+                    android:textColor="#1A1A1A"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <Switch
+                    android:id="@+id/swFeishu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="检测到新记录就推到飞书" />
+
+                <EditText
+                    android:id="@+id/etWebhook"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="机器人 Webhook（https://open.feishu.cn/...）"
+                    android:inputType="textUri"
+                    android:maxLines="3"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/etSecret"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="签名校验 Secret（没开加签就留空）"
+                    android:inputType="textVisiblePassword"
+                    android:maxLines="1"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSaveFeishu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="保存" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTestFeishu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="测试推送" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvPush"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#888888"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="14dp"
             android:text="修改密码" />
 
-        <TextView
-            android:id="@+id/tvLog"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:fontFamily="monospace"
-            android:textIsSelectable="true"
-            android:textSize="13sp" />
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#F0F0F0"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/tvLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:padding="14dp"
+                android:textColor="#333333"
+                android:textIsSelectable="true"
+                android:textSize="13sp" />
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </ScrollView>

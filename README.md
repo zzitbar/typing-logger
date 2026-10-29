@@ -11,7 +11,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| 微博热搜首页 | 打开即拉取微博公开热搜榜，显示排名、热度，点击条目复制标题 |
+| 微博热搜首页 | Material 3 卡片列表，展示排名与热度，点击条目在应用内打开微博搜索 |
 | 隐藏入口 | 右下角 44dp 的半透明小圆点，点开输密码进日志页 |
 | 记录上屏文字 | 微信、短信、备忘录、浏览器等大多数输入框，带时间与应用名 |
 | 飞书推送 | 每条新记录实时推到飞书群自定义机器人，支持签名校验 |
@@ -20,7 +20,9 @@
 
 ## 使用
 
-**首页**：打开就是「微博热搜」，右上角“刷新”手动更新，顶部的“更新于/缓存”表示数据时间；点击某条热搜会把标题复制到剪贴板。
+**首页**：打开就是「微博热搜」，顶部工具栏显示“更新于/缓存”，下拉或点右上角刷新。点某条热搜会在**应用内置浏览器**里打开微博搜索页（`m.weibo.cn`），不再跳外部 App；内置浏览器有标题栏、返回键和加载进度，页面里的 `sinaweibo://` 链接才交给系统处理。
+
+**界面**：Material 3（`com.google.android.material`）+ RecyclerView + SwipeRefreshLayout，卡片式榜单、下拉刷新、圆形排名徽标；日志页也换成了卡片分组与 MaterialButton。
 
 **进日志页**：点右下角那个很淡的小圆点 → 输入密码（默认 `ZHHL@91xxkj`）→ 进入日志页。日志页里是无障碍状态、记录开关、今天的记录、导出、清空、飞书配置、修改密码。
 
@@ -69,6 +71,7 @@ typing-logger/
         ├── AndroidManifest.xml
         ├── java/dev/local/typinglog/
         │   ├── HotSearchActivity.kt   首页：微博热搜 + 隐藏入口
+        │   ├── WebViewActivity.kt     内置浏览器：打开微博搜索页
         │   ├── LogsActivity.kt        日志页：记录、导出、飞书、改密码
         │   ├── HotSearchRepository.kt 热搜抓取、解析、缓存
         │   ├── TypingLogService.kt    无障碍服务：捕获并聚合上屏文字
@@ -79,8 +82,9 @@ typing-logger/
         │   ├── Keys.kt                SharedPreferences 键
         │   └── Record.kt              数据结构
         └── res/
-            ├── layout/activity_hot.xml, item_hot.xml, activity_main.xml
-            ├── drawable/bg_hidden.xml, ic_launcher_foreground.xml
+            ├── layout/activity_hot.xml, item_hot.xml, activity_main.xml, activity_web.xml
+            ├── drawable/bg_hidden.xml, ic_launcher_foreground.xml, bg_rank.xml, ic_refresh.xml, ic_back.xml
+            ├── menu/menu_hot.xml
             ├── mipmap-anydpi-v26/ic_launcher.xml
             ├── values/strings.xml, themes.xml, colors.xml
             └── xml/accessibility_service_config.xml, file_paths.xml
@@ -91,7 +95,7 @@ typing-logger/
 环境：Android Studio Hedgehog (2023.1.1) 或更新，JDK 17，Android SDK 34。
 
 1. Android Studio → **Open**，选择 `typing-logger` 目录。
-2. 等 Gradle sync 完成（首次下载 Gradle 8.2、AGP 8.2.2、Kotlin 1.9.22、androidx.core）。
+2. 等 Gradle sync 完成（首次下载 Gradle 8.2、AGP 8.2.2、Kotlin 1.9.22，以及 Material 3、AppCompat、RecyclerView、SwipeRefreshLayout）。
 3. **Build → Build Bundle(s)/APK(s) → Build APK(s)**，产物在 `app/build/outputs/apk/debug/app-debug.apk`。
 
 命令行（需本机 Gradle 8.2+ 与 SDK 34）：
@@ -145,8 +149,11 @@ gradle assembleDebug
 
 ## 常见问题
 
+**点了热搜打不开？**
+内置浏览器直接加载 `m.weibo.cn`，白屏先检查网络；微博改版也可能让搜索页失效，可把 `HotSearchActivity.openWeibo()` 里的 URL 换成 `https://s.weibo.com/weibo?q=<关键词>` 试试。
+
 **热搜加载失败？**
-微博接口偶尔限流或改版，页面会显示上次缓存。点“刷新”重试；长时间失败说明接口变了，需要更新 `HotSearchRepository.kt` 里的地址或解析逻辑。
+微博接口偶尔限流或改版，页面会显示上次缓存。下拉重试；长时间失败说明接口变了，需要更新 `HotSearchRepository.kt` 里的地址或解析逻辑。
 
 **找不到日志入口？**
 右下角距边 16dp 处有个 3% 黑的小圆点，正常看几乎不可见。
