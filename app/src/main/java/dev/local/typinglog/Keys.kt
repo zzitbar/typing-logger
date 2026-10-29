@@ -12,4 +12,7 @@ object Keys {
     const val FEISHU_WEBHOOK = "feishu_webhook"
     const val FEISHU_SECRET = "feishu_secret"
     const val FEISHU_LAST = "feishu_last"
+
+    const val HOT_CACHE = "hot_cache"
+    const val HOT_CACHE_AT = "hot_cache_at"
 }

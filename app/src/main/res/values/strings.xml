@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">数据记录</string>
+    <string name="app_name">微博热搜</string>
+    <string name="logs_title">数据记录</string>
     <string name="service_desc">把你在输入框中上屏的文字，按时间记录到本机；开启飞书推送后，新记录会发送到你配置的飞书机器人。密码输入框会被系统屏蔽。</string>
 </resources>

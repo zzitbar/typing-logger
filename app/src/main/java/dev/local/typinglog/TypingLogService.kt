@@ -2,12 +2,16 @@ package dev.local.typinglog
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.ComponentCallbacks2
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import java.util.concurrent.Executors
 
 /**
  * 记录“上屏文字”。
@@ -21,7 +25,13 @@ import java.util.concurrent.Executors
 class TypingLogService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private val worker = Executors.newSingleThreadExecutor()
+
+    /** 屏幕熄灭或进程将被回收时，先把待落盘的那一段写掉。 */
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) flushAll()
+        }
+    }
 
     /** key = 包名 + 窗口 id */
     private val pending = HashMap<String, Pending>()
@@ -45,6 +55,10 @@ class TypingLogService : AccessibilityService() {
             eventTypes = AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             notificationTimeout = 50
+        }
+        try {
+            registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        } catch (_: Exception) {
         }
     }
 
@@ -125,18 +139,16 @@ class TypingLogService : AccessibilityService() {
         val app = labelOf(pkg)
         val record = Record(now, pkg, app, text)
 
+        // 同步落盘：写完才返回，进程随后被杀也不会丢这一条
+        try {
+            LogStore.append(this, record)
+        } catch (_: Exception) {
+        }
+
         // 推送失败不影响本地记录
         try {
             FeishuPusher.submit(this, record)
         } catch (_: Exception) {
-        }
-
-        worker.execute {
-            try {
-                LogStore.append(this, record)
-            } catch (_: Exception) {
-                // 存储失败不影响输入
-            }
         }
     }
 
@@ -156,9 +168,27 @@ class TypingLogService : AccessibilityService() {
         flushAll()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        flushAll()
+        super.onTaskRemoved(rootIntent)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) flushAll()
+        super.onTrimMemory(level)
+    }
+
+    override fun onLowMemory() {
+        flushAll()
+        super.onLowMemory()
+    }
+
     override fun onDestroy() {
         flushAll()
-        worker.shutdown()
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (_: Exception) {
+        }
         super.onDestroy()
     }
 

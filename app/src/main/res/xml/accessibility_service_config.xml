@@ -6,4 +6,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/service_desc"
     android:notificationTimeout="50"
-    android:settingsActivity="dev.local.typinglog.MainActivity" />
+    android:settingsActivity="dev.local.typinglog.LogsActivity" />
