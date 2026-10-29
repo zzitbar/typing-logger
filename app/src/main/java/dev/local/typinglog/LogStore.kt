@@ -11,7 +11,7 @@ import java.util.zip.ZipOutputStream
 
 /**
  * 本地存储：每天一个 JSONL 文件，放在应用私有目录 files/logs/ 下。
- * 不申请网络权限，数据不会离开手机，除非用户主动导出。
+ * 这里只负责本机读写；联网只发生在 FeishuPusher 里，且需要用户主动开启。
  */
 object LogStore {
 

