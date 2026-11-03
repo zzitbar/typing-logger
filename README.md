@@ -11,7 +11,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| 微博/抖音/知乎热搜 | 顶部标签切换三个榜单，Material 3 列表，点击条目在应用内打开对应页面 |
+| 微博/抖音/知乎热搜 | 顶部标签或左右滑动切换三个榜单，Material 3 列表，点击条目在应用内打开对应页面 |
 | 隐藏入口 | 右下角 44dp 的半透明小圆点，点开输密码进日志页 |
 | 记录上屏文字 | 微信、短信、备忘录、浏览器等大多数输入框，带时间与应用名 |
 | 飞书推送 | 内置默认机器人，新记录实时推送；支持改 Webhook、签名校验 |
@@ -20,9 +20,9 @@
 
 ## 使用
 
-**首页**：顶部「微博 / 抖音 / 知乎」三个标签切换榜单，工具栏显示“更新于/缓存”，下拉或点右上角刷新；三个榜单各自缓存，切换时先显示缓存再刷新。点条目会在**应用内置浏览器**里打开——微博走 `m.weibo.cn` 搜索，抖音走 `www.douyin.com/search`，知乎直接打开对应问题页（没有链接时退回知乎搜索）。
+**首页**：顶部「微博 / 抖音 / 知乎」三个标签，点标签或**左右滑动**都能切换榜单。工具栏显示“更新于/缓存”，下拉或点右上角刷新；三个榜单各自缓存，切换时先显示缓存再刷新。点条目会在**应用内置浏览器**里打开——微博走 `m.weibo.cn` 搜索，抖音走 `www.douyin.com/search`，知乎直接打开对应问题页（没有链接时退回知乎搜索）。
 
-**界面**：Material 3（`com.google.android.material`）+ RecyclerView + SwipeRefreshLayout，卡片式榜单、下拉刷新、圆形排名徽标；日志页也换成了卡片分组与 MaterialButton。
+**界面**：Material 3（`com.google.android.material`）+ ViewPager2 + RecyclerView + SwipeRefreshLayout，滑动切页、下拉刷新、圆形排名徽标；刷新用 DiffUtil 局部更新，页面切换淡入淡出，空数据有占位提示；日志页是卡片分组与 MaterialButton。
 
 **进日志页**：点右下角那个很淡的小圆点 → 输入密码（默认 `ZHHL@91xxkj`）→ 进入日志页。日志页里是无障碍状态、记录开关、今天的记录、导出、清空、飞书配置、修改密码。
 
@@ -70,7 +70,8 @@ typing-logger/
     └── src/main/
         ├── AndroidManifest.xml
         ├── java/dev/local/typinglog/
-        │   ├── HotSearchActivity.kt   首页：微博热搜 + 隐藏入口
+        │   ├── HotSearchActivity.kt   首页：标签 + ViewPager2 + 隐藏入口
+        │   ├── HotListFragment.kt     单个榜单页：加载、缓存、下拉刷新
         │   ├── WebViewActivity.kt     内置浏览器：打开微博搜索页
         │   ├── LogsActivity.kt        日志页：记录、导出、飞书、改密码
         │   ├── HotSearchRepository.kt 微博/抖音/知乎热搜抓取、解析、分源缓存
@@ -82,7 +83,7 @@ typing-logger/
         │   ├── Keys.kt                SharedPreferences 键
         │   └── Record.kt              数据结构
         └── res/
-            ├── layout/activity_hot.xml, item_hot.xml, activity_main.xml, activity_web.xml
+            ├── layout/activity_hot.xml, fragment_hot.xml, item_hot.xml, activity_main.xml, activity_web.xml
             ├── drawable/bg_hidden.xml, ic_launcher_foreground.xml, bg_rank.xml, ic_refresh.xml, ic_back.xml
             ├── menu/menu_hot.xml
             ├── mipmap-anydpi-v26/ic_launcher.xml
@@ -95,7 +96,7 @@ typing-logger/
 环境：Android Studio Hedgehog (2023.1.1) 或更新，JDK 17，Android SDK 34。
 
 1. Android Studio → **Open**，选择 `typing-logger` 目录。
-2. 等 Gradle sync 完成（首次下载 Gradle 8.2、AGP 8.2.2、Kotlin 1.9.22，以及 Material 3、AppCompat、RecyclerView、SwipeRefreshLayout）。
+2. 等 Gradle sync 完成（首次下载 Gradle 8.2、AGP 8.2.2、Kotlin 1.9.22，以及 Material 3、AppCompat、ViewPager2、RecyclerView、SwipeRefreshLayout）。
 3. **Build → Build Bundle(s)/APK(s) → Build APK(s)**，产物在 `app/build/outputs/apk/debug/app-debug.apk`。
 
 命令行（需本机 Gradle 8.2+ 与 SDK 34）：

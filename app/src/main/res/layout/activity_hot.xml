@@ -30,20 +30,11 @@
             app:tabSelectedTextColor="#FF8200"
             app:tabTextColor="#777777" />
 
-        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            android:id="@+id/swipe"
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/pager"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvHot"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingTop="6dp"
-                android:paddingBottom="88dp" />
-        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+            android:layout_weight="1" />
     </LinearLayout>
 
     <!-- 隐藏入口：一个几乎看不见的小圆点，点它输入密码进日志页 -->
