@@ -93,18 +93,18 @@ typing-logger/
 
 ## 构建
 
-环境：Android Studio Hedgehog (2023.1.1) 或更新，JDK 17，Android SDK 34。
-
-1. Android Studio → **Open**，选择 `typing-logger` 目录。
-2. 等 Gradle sync 完成（首次下载 Gradle 8.2、AGP 8.2.2、Kotlin 1.9.22，以及 Material 3、AppCompat、ViewPager2、RecyclerView、SwipeRefreshLayout）。
-3. **Build → Build Bundle(s)/APK(s) → Build APK(s)**，产物在 `app/build/outputs/apk/debug/app-debug.apk`。
-
-命令行（需本机 Gradle 8.2+ 与 SDK 34）：
+环境：JDK 17、Android SDK 34（platform + build-tools 34.0.0），Gradle 8.2（工程自带 wrapper）。
 
 ```bash
 cd typing-logger
-gradle assembleDebug
+# 指向本机 SDK，路径按实际情况改
+echo "sdk.dir=D:/AI/android-sdk" > local.properties
+./gradlew assembleDebug
 ```
+
+Windows 下用 `gradlew.bat assembleDebug`；产物在 `app/build/outputs/apk/debug/app-debug.apk`。
+
+已在 2026-11-03 用 JDK 17 + Android SDK 34 + Gradle 8.2 实测编译通过（debug APK 约 5.4 MB）。用 Android Studio（Hedgehog 或更新）打开本目录同样可以直接构建。
 
 ## 安装与授权
 
