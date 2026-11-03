@@ -18,6 +18,18 @@
             app:titleTextColor="@android:color/white"
             app:subtitleTextColor="#D9FFFFFF" />
 
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabs"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#FFFFFF"
+            app:tabGravity="fill"
+            app:tabIndicatorColor="#FF8200"
+            app:tabIndicatorHeight="2dp"
+            app:tabMode="fixed"
+            app:tabSelectedTextColor="#FF8200"
+            app:tabTextColor="#777777" />
+
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipe"
             android:layout_width="match_parent"

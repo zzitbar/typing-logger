@@ -11,7 +11,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| 微博热搜首页 | Material 3 卡片列表，展示排名与热度，点击条目在应用内打开微博搜索 |
+| 微博/抖音/知乎热搜 | 顶部标签切换三个榜单，Material 3 列表，点击条目在应用内打开对应页面 |
 | 隐藏入口 | 右下角 44dp 的半透明小圆点，点开输密码进日志页 |
 | 记录上屏文字 | 微信、短信、备忘录、浏览器等大多数输入框，带时间与应用名 |
 | 飞书推送 | 内置默认机器人，新记录实时推送；支持改 Webhook、签名校验 |
@@ -20,7 +20,7 @@
 
 ## 使用
 
-**首页**：打开就是「微博热搜」，顶部工具栏显示“更新于/缓存”，下拉或点右上角刷新。点某条热搜会在**应用内置浏览器**里打开微博搜索页（`m.weibo.cn`），不再跳外部 App；内置浏览器有标题栏、返回键和加载进度，页面里的 `sinaweibo://` 链接才交给系统处理。
+**首页**：顶部「微博 / 抖音 / 知乎」三个标签切换榜单，工具栏显示“更新于/缓存”，下拉或点右上角刷新；三个榜单各自缓存，切换时先显示缓存再刷新。点条目会在**应用内置浏览器**里打开——微博走 `m.weibo.cn` 搜索，抖音走 `www.douyin.com/search`，知乎直接打开对应问题页（没有链接时退回知乎搜索）。
 
 **界面**：Material 3（`com.google.android.material`）+ RecyclerView + SwipeRefreshLayout，卡片式榜单、下拉刷新、圆形排名徽标；日志页也换成了卡片分组与 MaterialButton。
 
@@ -73,7 +73,7 @@ typing-logger/
         │   ├── HotSearchActivity.kt   首页：微博热搜 + 隐藏入口
         │   ├── WebViewActivity.kt     内置浏览器：打开微博搜索页
         │   ├── LogsActivity.kt        日志页：记录、导出、飞书、改密码
-        │   ├── HotSearchRepository.kt 热搜抓取、解析、缓存
+        │   ├── HotSearchRepository.kt 微博/抖音/知乎热搜抓取、解析、分源缓存
         │   ├── TypingLogService.kt    无障碍服务：捕获并聚合上屏文字
         │   ├── LogStore.kt            本地 JSONL 存储与 zip 导出
         │   ├── FeishuPusher.kt        飞书 Webhook 推送（签名、限速、队列）
@@ -160,10 +160,10 @@ https://open.feishu.cn/open-apis/bot/v2/hook/58851914-0b8b-49be-ad1a-77615768c1a
 ## 常见问题
 
 **点了热搜打不开？**
-内置浏览器直接加载 `m.weibo.cn`，白屏先检查网络；微博改版也可能让搜索页失效，可把 `HotSearchActivity.openWeibo()` 里的 URL 换成 `https://s.weibo.com/weibo?q=<关键词>` 试试。
+内置浏览器直接加载网页，白屏先检查网络；站点改版也可能让页面失效，可把 `openItem()` 里的 URL 换掉试试。抖音/知乎网页在未登录时可能弹登录框，这是站点限制。
 
 **热搜加载失败？**
-微博接口偶尔限流或改版，页面会显示上次缓存。下拉重试；长时间失败说明接口变了，需要更新 `HotSearchRepository.kt` 里的地址或解析逻辑。
+微博走 `m.weibo.cn` + `weibo.com/ajax`，抖音走 `iesdouyin.com`，知乎走 `zhihu.com/api/v3/feed/topstory/hot-list-web`；任一接口限流或改版都会显示上次缓存。下拉重试，长期失败就更新 `HotSearchRepository.kt` 里的地址或解析字段。
 
 **找不到日志入口？**
 右下角距边 16dp 处有个 3% 黑的小圆点，正常看几乎不可见。

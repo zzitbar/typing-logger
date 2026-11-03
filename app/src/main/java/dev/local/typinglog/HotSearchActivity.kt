@@ -18,34 +18,38 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.tabs.TabLayout
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
- * 首页：微博热搜榜。
- * 点条目跳微博（优先客户端，装不了就开网页）；右下角小圆点是日志入口。
+ * 首页：顶部切换「微博热搜 / 抖音热搜」。
+ * 点条目用内置浏览器打开对应搜索；右下角小圆点是日志入口。
  */
 class HotSearchActivity : AppCompatActivity() {
 
     private val io = Executors.newSingleThreadExecutor()
 
     private lateinit var toolbar: MaterialToolbar
+    private lateinit var tabs: TabLayout
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var recycler: RecyclerView
 
     private val items = ArrayList<HotItem>()
     private val adapter = HotAdapter()
 
-    private var loading = false
+    private var source = HotSource.WEIBO
     private var lastLoadedAt = 0L
+    private var loadSeq = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_hot)
 
         toolbar = findViewById(R.id.toolbar)
+        tabs = findViewById(R.id.tabs)
         swipe = findViewById(R.id.swipe)
         recycler = findViewById(R.id.rvHot)
 
@@ -62,18 +66,35 @@ class HotSearchActivity : AppCompatActivity() {
             }
         }
 
+        tabs.addTab(tabs.newTab().setText("微博"))
+        tabs.addTab(tabs.newTab().setText("抖音"))
+        tabs.addTab(tabs.newTab().setText("知乎"))
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                val next = HotSource.values().getOrNull(tab.position) ?: return
+                if (next == source) return
+                source = next
+                applySource()
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
+
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                refresh()
+            }
+        })
+
         swipe.setColorSchemeColors(0xFFFF8200.toInt())
         swipe.setOnRefreshListener { refresh() }
 
         findViewById<View>(R.id.btnHidden).setOnClickListener { askPassword() }
 
-        restoreCache()
-        refresh()
+        applySource()
     }
 
     override fun onResume() {
         super.onResume()
-        if (!loading && lastLoadedAt > 0 &&
+        if (lastLoadedAt > 0 &&
             System.currentTimeMillis() - lastLoadedAt > 5 * 60_000
         ) {
             refresh()
@@ -87,8 +108,21 @@ class HotSearchActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------ 数据
 
+    private fun applySource() {
+        toolbar.title = when (source) {
+            HotSource.WEIBO -> "微博热搜"
+            HotSource.DOUYIN -> "抖音热搜"
+            HotSource.ZHIHU -> "知乎热搜"
+        }
+        items.clear()
+        adapter.notifyDataSetChanged()
+        lastLoadedAt = 0
+        restoreCache()
+        refresh()
+    }
+
     private fun restoreCache() {
-        val cached = HotSearchRepository.loadCache(this) ?: return
+        val cached = HotSearchRepository.loadCache(this, source) ?: return
         val (list, at) = cached
         if (list.isEmpty()) return
         items.clear()
@@ -98,28 +132,28 @@ class HotSearchActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        if (loading) return
-        loading = true
+        val seq = ++loadSeq
+        val requested = source
         swipe.isRefreshing = true
         toolbar.subtitle = "加载中…"
 
         io.execute {
             val list = try {
-                HotSearchRepository.load()
+                HotSearchRepository.load(requested)
             } catch (_: Exception) {
                 emptyList()
             }
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
-                loading = false
-                swipe.isRefreshing = false
+                if (seq != loadSeq) return@runOnUiThread
 
+                swipe.isRefreshing = false
                 if (list.isNotEmpty()) {
                     items.clear()
                     items.addAll(list)
                     adapter.notifyDataSetChanged()
                     lastLoadedAt = System.currentTimeMillis()
-                    HotSearchRepository.saveCache(this, list)
+                    HotSearchRepository.saveCache(this, requested, list)
                     toolbar.subtitle = "更新于 " + timeText(lastLoadedAt)
                     recycler.scrollToPosition(0)
                 } else {
@@ -132,13 +166,19 @@ class HotSearchActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------ 跳转
 
-    private fun openWeibo(title: String) {
-        val q = Uri.encode(title)
-        val url = "https://m.weibo.cn/search?containerid=100103type%3D1%26q%3D$q"
+    private fun openItem(item: HotItem) {
+        val q = Uri.encode(item.title)
+        val url = when (source) {
+            HotSource.WEIBO -> "https://m.weibo.cn/search?containerid=100103type%3D1%26q%3D$q"
+            HotSource.DOUYIN -> "https://www.douyin.com/search/$q"
+            HotSource.ZHIHU ->
+                if (item.url.isNotBlank()) item.url
+                else "https://www.zhihu.com/search?type=content&q=$q"
+        }
         startActivity(
             Intent(this, WebViewActivity::class.java)
                 .putExtra(WebViewActivity.EXTRA_URL, url)
-                .putExtra(WebViewActivity.EXTRA_TITLE, title)
+                .putExtra(WebViewActivity.EXTRA_TITLE, item.title)
         )
     }
 
@@ -202,7 +242,7 @@ class HotSearchActivity : AppCompatActivity() {
             holder.rank.backgroundTintList = ColorStateList.valueOf(rankColor(item.rank))
             holder.title.text = item.title
             holder.hot.text = item.hot
-            holder.itemView.setOnClickListener { openWeibo(item.title) }
+            holder.itemView.setOnClickListener { openItem(item) }
         }
 
         override fun getItemCount(): Int = items.size
