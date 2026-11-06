@@ -57,6 +57,12 @@
                     android:layout_marginTop="6dp"
                     android:text="记录开关" />
 
+                <Switch
+                    android:id="@+id/swDebug"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="无障碍事件调试（排查收不到时打开）" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnToday"
                     android:layout_width="match_parent"
