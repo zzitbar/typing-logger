@@ -1,6 +1,8 @@
 package dev.local.typinglog
 
 import android.content.Context
+import android.os.Build
+import android.provider.Settings
 import android.util.Base64
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -42,14 +44,30 @@ object FeishuPusher {
 
     private var lastSentAt = 0L
 
+    @Volatile
+    private var cachedDeviceName: String? = null
+
     /** 有新记录时调用；没开启推送或没配 Webhook 时直接返回。 */
     fun submit(ctx: Context, record: Record) {
-        val p = prefs(ctx)
-        if (!p.getBoolean(Keys.FEISHU_ENABLED, true)) return
-        if (webhook(ctx).isBlank()) return
+        if (!enabled(ctx)) return
+        enqueue(ctx, buildMessage(ctx, record))
+    }
 
+    /** 心跳：证明记录服务还活着。 */
+    fun heartbeat(ctx: Context) {
+        if (!enabled(ctx)) return
+        val time = SimpleDateFormat("MM-dd HH:mm:ss", Locale.US).format(Date())
+        enqueue(ctx, "【心跳】$time · ${deviceName(ctx)}\n记录服务运行中")
+    }
+
+    private fun enabled(ctx: Context): Boolean {
+        val p = prefs(ctx)
+        if (!p.getBoolean(Keys.FEISHU_ENABLED, true)) return false
+        return webhook(ctx).isNotBlank()
+    }
+
+    private fun enqueue(ctx: Context, message: String) {
         appCtx = ctx.applicationContext
-        val message = buildMessage(record)
         if (!queue.offer(message)) {
             queue.poll()
             queue.offer(message)
@@ -61,7 +79,7 @@ object FeishuPusher {
     fun test(ctx: Context, onResult: (Boolean, String) -> Unit) {
         appCtx = ctx.applicationContext
         val now = SimpleDateFormat("MM-dd HH:mm:ss", Locale.US).format(Date())
-        val message = "【数据记录】测试消息\n如果你看到这条，说明推送配置可用。\n$now"
+        val message = "【数据记录】测试消息\n设备：${deviceName(ctx)}\n如果你看到这条，说明推送配置可用。\n$now"
         tester.execute {
             val result = try {
                 send(ctx, message)
@@ -116,11 +134,26 @@ object FeishuPusher {
         }
     }
 
-    private fun buildMessage(record: Record): String {
+    private fun buildMessage(ctx: Context, record: Record): String {
         val time = SimpleDateFormat("MM-dd HH:mm:ss", Locale.US).format(Date(record.ts))
         var body = record.text
         if (body.length > MAX_TEXT_LEN) body = body.take(MAX_TEXT_LEN) + "…"
-        return "【数据记录】$time · ${record.app}\n$body"
+        return "【数据记录】$time · ${record.app} · ${deviceName(ctx)}\n$body"
+    }
+
+    /** 系统里设置的设备名；没有就退回厂商 + 型号。 */
+    private fun deviceName(ctx: Context): String {
+        cachedDeviceName?.let { return it }
+        val name = try {
+            Settings.Global.getString(ctx.contentResolver, Settings.Global.DEVICE_NAME)
+        } catch (_: Exception) {
+            null
+        }?.takeIf { it.isNotBlank() }
+            ?: listOf(Build.MANUFACTURER, Build.MODEL)
+                .filter { it.isNotBlank() }
+                .joinToString(" ")
+        cachedDeviceName = name
+        return name
     }
 
     private fun send(ctx: Context, text: String): Pair<Boolean, String> {

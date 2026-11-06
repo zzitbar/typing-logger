@@ -19,6 +19,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
@@ -67,6 +70,13 @@ class LogsActivity : AppCompatActivity() {
         toggle.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(Keys.ENABLED, checked).apply()
             toast(if (checked) "已开始记录" else "已暂停记录")
+        }
+
+        val swDebug = findViewById<Switch>(R.id.swDebug)
+        swDebug.isChecked = prefs.getBoolean(Keys.DEBUG_EVENTS, false)
+        swDebug.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(Keys.DEBUG_EVENTS, checked).apply()
+            toast(if (checked) "已开始记录调试事件" else "已关闭调试事件")
         }
 
         etWebhook.setText(
@@ -251,11 +261,18 @@ class LogsActivity : AppCompatActivity() {
             ?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
             ?.any { it.resolveInfo?.serviceInfo?.packageName == packageName } == true
         val recording = prefs.getBoolean(Keys.ENABLED, true)
+        val heartbeat = prefs.getLong(Keys.HEARTBEAT_AT, 0L)
+
         return buildString {
             append("无障碍服务：")
             append(if (enabled) "已开启 ✓" else "未开启（点下方按钮去开启）")
             append("\n记录开关：")
             append(if (recording) "开" else "关")
+            append("\n最后心跳：")
+            append(
+                if (heartbeat <= 0) "暂无"
+                else SimpleDateFormat("MM-dd HH:mm:ss", Locale.US).format(Date(heartbeat))
+            )
             append("\n数据位置：应用私有目录 logs/；开启飞书推送后才会联网发送")
         }
     }

@@ -66,6 +66,12 @@ object LogStore {
                 f.inputStream().use { it.copyTo(zos) }
                 zos.closeEntry()
             }
+            // 调试事件单独放 debug/ 目录，方便排查微信这类收不到的情况
+            debugDir(ctx).listFiles()?.sortedBy { it.name }?.forEach { f ->
+                zos.putNextEntry(ZipEntry("debug/" + f.name))
+                f.inputStream().use { it.copyTo(zos) }
+                zos.closeEntry()
+            }
         }
         return out
     }
@@ -73,6 +79,9 @@ object LogStore {
     fun clear(ctx: Context) {
         synchronized(lock) {
             dir(ctx).listFiles()?.forEach { it.delete() }
+            debugDir(ctx).listFiles()?.forEach { it.delete() }
         }
     }
+
+    private fun debugDir(ctx: Context): File = File(ctx.filesDir, "debug")
 }

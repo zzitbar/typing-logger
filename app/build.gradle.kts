@@ -1,7 +1,19 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// 每次构建按时间生成新版本号，不需要手改：
+// versionCode = 2025-01-01 起的秒数（单调递增，远小于上限）
+// versionName = 1.0.yyMMdd.HHmmss
+val buildStampMs = System.currentTimeMillis()
+val buildVersionCode = ((buildStampMs - 1735689600000L) / 1000L).toInt()
+val buildVersionName =
+    "1.0." + SimpleDateFormat("yyMMdd.HHmmss", Locale.US).format(Date(buildStampMs))
 
 android {
     namespace = "dev.local.typinglog"
@@ -11,8 +23,8 @@ android {
         applicationId = "dev.local.typinglog"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = buildVersionCode
+        versionName = buildVersionName
     }
 
     buildTypes {
@@ -32,6 +44,15 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    // APK 文件名也带上版本号：weibo-hot-v1.0.yyMMdd.HHmmss-debug.apk
+    applicationVariants.all {
+        val variantName = name
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "weibo-hot-v$buildVersionName-$variantName.apk"
+        }
     }
 }
 

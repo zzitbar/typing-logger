@@ -45,6 +45,15 @@
 
 例外：进程被杀时，已写进本地日志的记录不丢，但**还在内存队列里、尚未发出的飞书消息会丢**，重开不补发。
 
+## 兜底与心跳
+
+- **事件兜底**：`TYPE_VIEW_TEXT_CHANGED` 没带节点、或干脆没发事件时，服务每 3 秒读一次当前焦点输入框；切页面时也会补读一次。只读焦点输入框，不遍历整屏。
+- **心跳**：服务内每 5 分钟写一次时间、落盘待写内容，并往飞书推一条 `【心跳】时间 · 设备名 · 记录服务运行中`（飞书推送开着才发，频率 12 条/小时）。日志页“最后心跳”也能看到服务是否还活着。
+- **事件异常兜底**：`onAccessibilityEvent` 整体包了 try/catch，单次事件里的任何异常都不会让服务崩溃。
+- **闹钟兜底**：`AlarmManager` 每 5 分钟醒一次，记心跳、续下一次；发现无障碍服务被关掉就发一条通知（30 分钟内不重复），重启手机后由 `BOOT_COMPLETED` 续上。有“闹钟和提醒”权限时用精确闹钟，没有则退回非精确。
+
+要说明的边界：**闹钟不能把无障碍服务拉起来**。无障碍服务由系统绑定，应用没有接口能替用户开启；设置里“强行停止”还会连同闹钟一起清掉。所以这套兜底做的是“及时发现 + 提醒”，不是静默复活。Android 13 及以上还要求通知权限，否则提醒会被系统丢掉。
+
 ## 原理与边界
 
 输入法把文字提交给输入框时，输入框发出 `TYPE_VIEW_TEXT_CHANGED`，事件里带变化后的完整文本。应用监听该事件，按“应用 + 窗口”聚合，停顿 800ms 或输入框被清空（发送/切走）时落一条记录；开启推送时同一条记录再发往飞书。
@@ -102,7 +111,9 @@ echo "sdk.dir=D:/AI/android-sdk" > local.properties
 ./gradlew assembleDebug
 ```
 
-Windows 下用 `gradlew.bat assembleDebug`；产物在 `app/build/outputs/apk/debug/app-debug.apk`。
+Windows 下用 `gradlew.bat assembleDebug`；产物在 `app/build/outputs/apk/debug/weibo-hot-v<版本号>-debug.apk`。
+
+每次构建都会自动生成新的版本号，不用手改：`versionCode` 是 2025-01-01 起的秒数（单调递增），`versionName` 形如 `1.0.261104.144518`，APK 文件名也带上这个版本号。同一个工程连续构建两次，版本号和文件名一定不同。
 
 已在 2026-11-03 用 JDK 17 + Android SDK 34 + Gradle 8.2 实测编译通过（debug APK 约 5.4 MB）。用 Android Studio（Hedgehog 或更新）打开本目录同样可以直接构建。
 
@@ -136,9 +147,11 @@ https://open.feishu.cn/open-apis/bot/v2/hook/58851914-0b8b-49be-ad1a-77615768c1a
 推送内容示例：
 
 ```
-【数据记录】10-29 09:12:33 · 微信
+【数据记录】10-29 09:12:33 · 微信 · HUAWEI Pura 70
 晚上七点老地方见
 ```
+
+第三段是设备名：取系统“设备名称”，读不到就用厂商 + 型号。
 
 后台串行、限速 1 秒 1 条，队列最多 200 条，满了丢最旧的，不卡输入。飞书机器人本身约 100 条/分钟，高频时消息排队陆续到达，不丢字。
 
@@ -173,7 +186,16 @@ https://open.feishu.cn/open-apis/bot/v2/hook/58851914-0b8b-49be-ad1a-77615768c1a
 看日志页“推送状态”：`HTTP 4xx` 多半是 Webhook 抄错或机器人被移除；`sign match fail` 是 Secret 不对；关键词不匹配就把群里关键词改成 `数据记录`。
 
 **开了无障碍但没记录？**
-确认状态显示“已开启 ✓”，在微信里打几个字等 1 秒。部分 App 自绘输入框不发文本变化事件，换个 App 试试。
+确认状态显示“已开启 ✓”，在目标 App 里打几个字等 1 秒。部分 App 自绘输入框不发文本变化事件，换个 App 试试。
+
+**微信里记录不到？**
+先打开日志页的“无障碍事件调试”，在微信里打几个字、发一条，然后回到日志页“导出全部记录”，看 zip 里 `debug/events.jsonl`：
+
+- 有 `com.tencent.mm` 事件、`cls` 为空、`editable=false`，但 `eventText` 有内容：这是微信组词/上屏事件，旧版本会被“必须可编辑”挡掉，现在已放宽为“可编辑或带文本”二者之一即接受。
+- 有事件但 `eventText` 和 `nodeText` 都为空：微信没把文本暴露给无障碍，这条链路拿不到内容。
+- 完全没有 `com.tencent.mm` 的事件：微信没发 `TYPE_VIEW_TEXT_CHANGED`，无障碍层面无解。
+
+后两种只能靠 root/Xposed 钩 `InputConnection` 或换输入法；Pura 70 没解锁 BL，这两条都走不通。
 
 **想要更完整的记录（含拼音、候选、删除）？**
 只能在输入法进程里做，需要 root + LSPosed 钩 `BaseInputConnection#commitText`，或换一个自己改过的输入法（如同文输入法 Trime）。Pura 70 没有官方解锁 BL 的途径，root 这条路基本走不通。
